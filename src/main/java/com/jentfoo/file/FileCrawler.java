@@ -40,10 +40,11 @@ public class FileCrawler {
       try {
         Future<?> f = it.next();
         if (! f.isDone()) {
-          int donePercent = (int)Math.round((doneCount / futures.size()) * 100);
+          // we take * 10 and / 10 so we can get one additional decimal of accuracy
+          int donePercent = (int)Math.round((doneCount / futures.size()) * 100 * 10);
           if (donePercent != lastReportedDonePercent) {
             lastReportedDonePercent = donePercent;
-            System.out.println("Progress: " + donePercent + "%");
+            System.out.println("Progress: " + (donePercent / 10.) + "%");
           }
           f.get();
         }
