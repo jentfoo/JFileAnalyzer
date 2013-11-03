@@ -11,6 +11,9 @@ import org.threadly.concurrent.PrioritySchedulerInterface;
 import org.threadly.util.ExceptionUtils;
 
 public class FileCrawler {
+  private static final short MAX_FILES_PER_THREAD = 100;
+  private static final long MAX_SIZE_PER_THREAD = 1024L * 1024L * 1024L * 10; // 10 GB
+  
   private final PrioritySchedulerInterface scheduler;
   private final List<FileListenerInterface> listeners;
   
@@ -27,17 +30,27 @@ public class FileCrawler {
     List<Future<?>> futures = new LinkedList<Future<?>>();
     
     crawlDirectories(examineDirectories, futures);
+    System.out.println("Processing " + futures.size() + " work units\n");
     
     // block till all computation has completed
     float doneCount = 0;
+    int lastReportedDonePercent = 0;
     Iterator<Future<?>> it = futures.iterator();
     while (it.hasNext()) {
       try {
-        it.next().get();
+        Future<?> f = it.next();
+        if (! f.isDone()) {
+          int donePercent = (int)Math.round((doneCount / futures.size()) * 100);
+          if (donePercent != lastReportedDonePercent) {
+            lastReportedDonePercent = donePercent;
+            System.out.println("Progress: " + donePercent + "%");
+          }
+          f.get();
+        }
         doneCount++;
-        System.out.println("Progress: " + ((doneCount / futures.size()) * 100) + "%");
       } catch (InterruptedException e) {
-        return;
+        ExceptionUtils.handleException(e);
+        return; // let thread exit
       } catch (ExecutionException e) {
         ExceptionUtils.handleException(e);
       }
@@ -46,16 +59,27 @@ public class FileCrawler {
   
   private void crawlDirectories(List<File> examineDirectories, List<Future<?>> futures) {
     List<File> toInspectDirectories = new LinkedList<File>();
+    long toInspectSize = 0;
     List<File> toInspectFiles = new LinkedList<File>();
     Iterator<File> it = examineDirectories.iterator();
     while (it.hasNext()) {
-      File[] contents = it.next().listFiles();
+      File directory = it.next();
+      File[] contents = directory.listFiles();
       
       for (File f : contents) {
         if (f.isDirectory()) {
           toInspectDirectories.add(f);
         } else {
           toInspectFiles.add(f);
+          toInspectSize += f.length();
+          
+          if (toInspectSize >= MAX_SIZE_PER_THREAD || 
+              toInspectFiles.size() >= MAX_FILES_PER_THREAD) {
+            futures.add(handleFiles(toInspectFiles));
+            
+            toInspectFiles = new LinkedList<File>();
+            toInspectSize = 0;
+          }
         }
       }
     }

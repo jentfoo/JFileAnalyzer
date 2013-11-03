@@ -2,9 +2,10 @@ package com.jentfoo.file;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -40,30 +41,35 @@ public class DuplicateFileInspector implements FileListenerInterface {
   @Override
   public void handleFile(File file) {
     try {
-      MessageDigest md = MessageDigest.getInstance(ALGORITHM);
-      InputStream in = new FileInputStream(file);
-      try {
-        DigestInputStream dis = new DigestInputStream(in, md);
-        
-        try {
-          byte[] digest = dis.getMessageDigest().digest();
-          DigestResult dr = new DigestResult(digest);
-          
-          // duplicates should be rare, so we assume there is none
-          List<File> dupFiles = new LinkedList<File>();
-          List<File> existingList = fileDigests.putIfAbsent(dr, dupFiles);
-          if (existingList != null) {
-            dupFiles = existingList;
-          }
-          dupFiles.add(file);
-        } finally {
-          dis.close();
-        }
-      } finally {
-        in.close();
+      DigestResult dr = getFileDigest(file);
+      
+      // duplicates should be rare, so we assume there is none
+      List<File> dupFiles = new LinkedList<File>();
+      List<File> existingList = fileDigests.putIfAbsent(dr, dupFiles);
+      if (existingList != null) {
+        dupFiles = existingList;
       }
+      dupFiles.add(file);
     } catch (Exception e) {
       ExceptionUtils.handleException(e);
+    }
+  }
+  
+  private DigestResult getFileDigest(File file) throws IOException, 
+                                                       NoSuchAlgorithmException {
+    MessageDigest md = MessageDigest.getInstance(ALGORITHM);
+    InputStream in = new FileInputStream(file);
+    try {
+      byte[] buffer = new byte[8192];
+      int readCount;
+      while ((readCount = in.read(buffer)) > -1) {
+        md.update(buffer, 0, readCount);
+      }
+
+      byte[] digest = md.digest();
+      return new DigestResult(digest);
+    } finally {
+      in.close();
     }
   }
   
