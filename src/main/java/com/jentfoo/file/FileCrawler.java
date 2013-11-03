@@ -29,10 +29,13 @@ public class FileCrawler {
     crawlDirectories(examineDirectories, futures);
     
     // block till all computation has completed
+    float doneCount = 0;
     Iterator<Future<?>> it = futures.iterator();
     while (it.hasNext()) {
       try {
         it.next().get();
+        doneCount++;
+        System.out.println("Progress: " + ((doneCount / futures.size()) * 100) + "%");
       } catch (InterruptedException e) {
         return;
       } catch (ExecutionException e) {

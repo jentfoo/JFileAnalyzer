@@ -2,6 +2,7 @@ package com.jentfoo.file;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.threadly.concurrent.PriorityScheduledExecutor;
@@ -27,12 +28,53 @@ public class FileAnalyzer {
     }
     
     int threadCount = Runtime.getRuntime().availableProcessors() * 2;
-    PriorityScheduledExecutor scheduler = new PriorityScheduledExecutor(threadCount, threadCount, Long.MAX_VALUE, 
-                                                                        TaskPriority.High, 1000, false);
-    scheduler.prestartAllCoreThreads();
+    final PriorityScheduledExecutor scheduler = new PriorityScheduledExecutor(threadCount, threadCount, Long.MAX_VALUE, 
+                                                                              TaskPriority.High, 1000, false);
+    scheduler.execute(new Runnable() {
+      @Override
+      public void run() {
+        scheduler.prestartAllCoreThreads();
+      }
+    });
     try {
       FileCrawler fc = new FileCrawler(scheduler);
+      
+      FileNameInspector fni = new FileNameInspector();
+      fc.addListener(fni);
+      
+      DuplicateFileInspector dfi = new DuplicateFileInspector();
+      fc.addListener(dfi);
+      
+      // blocks till computation is done
       fc.crawlDirectories(examineDirectories);
+
+      List<File> renameFiles = fni.getNotableFiles();
+      List<List<File>> duplicateResult = dfi.getDuplicateFiles();
+      {
+        if (! renameFiles.isEmpty()) {
+          System.out.println();
+          
+          System.out.println("Files for possible rename: ");
+          Iterator<File> it = renameFiles.iterator();
+          while (it.hasNext()) {
+            System.out.println(it.next().getAbsolutePath());
+          }
+        }
+      }
+      {
+        if (! duplicateResult.isEmpty()) {
+          if (! renameFiles.isEmpty()) {
+            System.out.println();
+          }
+          System.out.println("Duplicate files: ");
+          Iterator<List<File>> it = duplicateResult.iterator();
+          while (it.hasNext()) {
+            System.out.println(it.next());
+          }
+        }
+      }
+      
+      System.out.println("\nDONE!!");
     } finally {
       scheduler.shutdown();
     }
