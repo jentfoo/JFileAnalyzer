@@ -66,6 +66,9 @@ public class FileCrawler {
     while (it.hasNext()) {
       File directory = it.next();
       File[] contents = directory.listFiles();
+      if (contents == null) {
+        continue;
+      }
       
       for (File f : contents) {
         if (f.isDirectory()) {

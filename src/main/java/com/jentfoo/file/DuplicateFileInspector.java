@@ -2,6 +2,7 @@ package com.jentfoo.file;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
@@ -51,7 +52,11 @@ public class DuplicateFileInspector implements FileListenerInterface {
       }
       dupFiles.add(file);
     } catch (Exception e) {
-      ExceptionUtils.handleException(e);
+      if (e instanceof FileNotFoundException) {
+        // ignore
+      } else {
+        ExceptionUtils.handleException(e);
+      }
     }
   }
   
