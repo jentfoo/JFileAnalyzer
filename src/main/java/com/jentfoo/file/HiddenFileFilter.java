@@ -12,8 +12,8 @@ public class HiddenFileFilter implements FileFilterInterface {
     int hiddenIndex = -1;
     do {
       hiddenIndex = path.indexOf(HIDDEN_STR, hiddenIndex + 1);
-      if (hiddenIndex > 0 && hiddenIndex + HIDDEN_STR.length() + 1 < path.length()) {
-        if (path.charAt(hiddenIndex + HIDDEN_STR.length() + 1) != '/') {
+      if (hiddenIndex > 0 && hiddenIndex + HIDDEN_STR.length() < path.length()) {
+        if (path.charAt(hiddenIndex + HIDDEN_STR.length()) != '/') {
           isHidden = true;
           break;
         }
