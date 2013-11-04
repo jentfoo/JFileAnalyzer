@@ -13,19 +13,27 @@ import org.threadly.util.ExceptionUtils;
 public class FileCrawler {
   private static final short MAX_FILES_PER_THREAD = 1000;
   private static final long MAX_SIZE_PER_THREAD = 1024L * 1024L * 1024L * 10; // 10 GB
-  private static final boolean EXCLUDE_HIDDEN = true;
-  private static final String HIDDEN_STR = "/.";
   
   private final PrioritySchedulerInterface scheduler;
   private final List<FileListenerInterface> listeners;
+  private final List<FileFilterInterface> filters;
   
   public FileCrawler(PrioritySchedulerInterface scheduler) {
     this.scheduler = scheduler;
     this.listeners = new LinkedList<FileListenerInterface>();
+    this.filters = new LinkedList<FileFilterInterface>();
   }
   
   public void addListener(FileListenerInterface listener) {
-    listeners.add(listener);
+    if (listener != null) {
+      listeners.add(listener);
+    }
+  }
+  
+  public void addFilter(FileFilterInterface filter) {
+    if (filter != null) {
+      filters.add(filter);
+    }
   }
 
   public void crawlDirectories(List<File> examineDirectories) {
@@ -73,22 +81,16 @@ public class FileCrawler {
       }
       
       for (File f : contents) {
-        if (EXCLUDE_HIDDEN) {
-          String path = f.getPath();
-          boolean isHidden = false;
-          int hiddenIndex = -1;
-          do {
-            hiddenIndex = path.indexOf(HIDDEN_STR, hiddenIndex + 1);
-            if (hiddenIndex > 0 && hiddenIndex + HIDDEN_STR.length() + 1 < path.length()) {
-              if (path.charAt(hiddenIndex + HIDDEN_STR.length() + 1) != '/') {
-                isHidden = true;
-                break;
-              }
-            }
-          } while (hiddenIndex > 0);
-          if (isHidden) {
-            continue;
+        boolean exclude = false;
+        Iterator<FileFilterInterface> filterIt = filters.iterator();
+        while (filterIt.hasNext()) {
+          if (filterIt.next().shouldExclude(f)) {
+            exclude = true;
+            break;
           }
+        }
+        if (exclude) {
+          continue;
         }
         
         if (f.isDirectory()) {

@@ -9,6 +9,8 @@ import org.threadly.concurrent.PriorityScheduledExecutor;
 import org.threadly.concurrent.TaskPriority;
 
 public class FileAnalyzer {
+  private static final boolean EXCLUDE_HIDDEN = true;
+  
   public static void main(String args[]) {
     if (args.length == 0) {
       System.err.println("Must provide at least one valid path to inspect");
@@ -38,6 +40,10 @@ public class FileAnalyzer {
     });
     try {
       FileCrawler fc = new FileCrawler(scheduler);
+      
+      if (EXCLUDE_HIDDEN) {
+        fc.addFilter(new HiddenFileFilter());
+      }
       
       FileNameInspector fni = new FileNameInspector();
       fc.addListener(fni);
