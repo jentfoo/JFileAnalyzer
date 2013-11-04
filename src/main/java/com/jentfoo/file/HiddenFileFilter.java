@@ -13,7 +13,8 @@ public class HiddenFileFilter implements FileFilterInterface {
     do {
       hiddenIndex = path.indexOf(HIDDEN_STR, hiddenIndex + 1);
       if (hiddenIndex > 0 && hiddenIndex + HIDDEN_STR.length() < path.length()) {
-        if (path.charAt(hiddenIndex + HIDDEN_STR.length()) != '/') {
+        char nextChar = path.charAt(hiddenIndex + HIDDEN_STR.length());
+        if (nextChar != '/' && nextChar != '.') {
           isHidden = true;
           break;
         }
