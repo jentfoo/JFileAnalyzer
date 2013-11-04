@@ -29,7 +29,7 @@ public class FileAnalyzer {
       examineDirectories.add(toInspectPath);
     }
     
-    int threadCount = Runtime.getRuntime().availableProcessors() * 2;
+    int threadCount = Runtime.getRuntime().availableProcessors();
     final PriorityScheduledExecutor scheduler = new PriorityScheduledExecutor(threadCount, threadCount, Long.MAX_VALUE, 
                                                                               TaskPriority.High, 1000, false);
     scheduler.execute(new Runnable() {
