@@ -11,8 +11,10 @@ import org.threadly.concurrent.PrioritySchedulerInterface;
 import org.threadly.util.ExceptionUtils;
 
 public class FileCrawler {
-  private static final short MAX_FILES_PER_THREAD = 100;
+  private static final short MAX_FILES_PER_THREAD = 1000;
   private static final long MAX_SIZE_PER_THREAD = 1024L * 1024L * 1024L * 10; // 10 GB
+  private static final boolean EXCLUDE_HIDDEN = true;
+  private static final String HIDDEN_STR = "/.";
   
   private final PrioritySchedulerInterface scheduler;
   private final List<FileListenerInterface> listeners;
@@ -71,6 +73,24 @@ public class FileCrawler {
       }
       
       for (File f : contents) {
+        if (EXCLUDE_HIDDEN) {
+          String path = f.getPath();
+          boolean isHidden = false;
+          int hiddenIndex = -1;
+          do {
+            hiddenIndex = path.indexOf(HIDDEN_STR, hiddenIndex + 1);
+            if (hiddenIndex > 0 && hiddenIndex + HIDDEN_STR.length() + 1 < path.length()) {
+              if (path.charAt(hiddenIndex + HIDDEN_STR.length() + 1) != '/') {
+                isHidden = true;
+                break;
+              }
+            }
+          } while (hiddenIndex > 0);
+          if (isHidden) {
+            continue;
+          }
+        }
+        
         if (f.isDirectory()) {
           toInspectDirectories.add(f);
         } else {
