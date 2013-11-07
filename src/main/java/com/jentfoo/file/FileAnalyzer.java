@@ -55,7 +55,7 @@ public class FileAnalyzer {
       fc.crawlDirectories(examineDirectories);
 
       List<File> renameFiles = fni.getNotableFiles();
-      List<List<File>> duplicateResult = dfi.getDuplicateFiles();
+      String duplicateResult = dfi.getDuplicateAnalysis(scheduler);
       {
         if (! renameFiles.isEmpty()) {
           System.out.println();
@@ -72,11 +72,7 @@ public class FileAnalyzer {
           if (! renameFiles.isEmpty()) {
             System.out.println();
           }
-          System.out.println("Duplicate files: ");
-          Iterator<List<File>> it = duplicateResult.iterator();
-          while (it.hasNext()) {
-            System.out.println(it.next());
-          }
+          System.out.println(duplicateResult);
         }
       }
       

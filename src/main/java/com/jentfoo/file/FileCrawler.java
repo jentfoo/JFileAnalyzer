@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.threadly.concurrent.PrioritySchedulerInterface;
@@ -43,29 +42,7 @@ public class FileCrawler {
     System.out.println("Processing " + futures.size() + " work units\n");
     
     // block till all computation has completed
-    float doneCount = 0;
-    int lastReportedDonePercent = 0;
-    Iterator<Future<?>> it = futures.iterator();
-    while (it.hasNext()) {
-      try {
-        Future<?> f = it.next();
-        if (! f.isDone()) {
-          // we take * 10 and / 10 so we can get one additional decimal of accuracy
-          int donePercent = (int)Math.round((doneCount / futures.size()) * 100 * 10);
-          if (donePercent != lastReportedDonePercent) {
-            lastReportedDonePercent = donePercent;
-            System.out.println("Progress: " + (donePercent / 10.) + "%");
-          }
-          f.get();
-        }
-        doneCount++;
-      } catch (InterruptedException e) {
-        ExceptionUtils.handleException(e);
-        return; // let thread exit
-      } catch (ExecutionException e) {
-        ExceptionUtils.handleException(e);
-      }
-    }
+    FutureUtil.blockTillAllDone(futures);
   }
   
   private void crawlDirectories(List<File> examineDirectories, List<Future<?>> futures) {
