@@ -1,6 +1,7 @@
 package com.jentfoo.file;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -11,7 +12,7 @@ import org.threadly.concurrent.TaskPriority;
 public class FileAnalyzer {
   private static final boolean EXCLUDE_HIDDEN = true;
   
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     if (args.length == 0) {
       System.err.println("Must provide at least one valid path to inspect");
       System.exit(1);

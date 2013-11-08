@@ -1,6 +1,7 @@
 package com.jentfoo.file;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,7 +36,7 @@ public class FileCrawler {
     }
   }
 
-  public void crawlDirectories(List<File> examineDirectories) {
+  public void crawlDirectories(List<File> examineDirectories) throws IOException {
     List<Future<?>> futures = new LinkedList<Future<?>>();
     
     crawlDirectories(examineDirectories, futures);
@@ -45,18 +46,20 @@ public class FileCrawler {
     FutureUtil.blockTillAllDone(futures);
   }
   
-  private void crawlDirectories(List<File> examineDirectories, List<Future<?>> futures) {
+  private void crawlDirectories(List<File> examineDirectories, 
+                                List<Future<?>> futures) throws IOException {
     List<File> toInspectDirectories = new LinkedList<File>();
     long toInspectSize = 0;
     List<File> toInspectFiles = new LinkedList<File>();
     Iterator<File> it = examineDirectories.iterator();
     while (it.hasNext()) {
-      File directory = it.next();
-      File[] contents = directory.listFiles();
+      File directory = it.next().getCanonicalFile();
+      File[] contents = FileUtils.getFolderContents(directory);
       if (contents == null) {
         continue;
       }
       
+      boolean containsDirectory = false;
       for (File f : contents) {
         boolean exclude = false;
         Iterator<FileFilterInterface> filterIt = filters.iterator();
@@ -71,6 +74,7 @@ public class FileCrawler {
         }
         
         if (f.isDirectory()) {
+          containsDirectory = true;
           toInspectDirectories.add(f);
         } else {
           toInspectFiles.add(f);
@@ -84,6 +88,11 @@ public class FileCrawler {
             toInspectSize = 0;
           }
         }
+      }
+      
+      if (containsDirectory) {
+        // might as well free up some memory
+        FileUtils.purgeContentsFromCache(directory);
       }
     }
     

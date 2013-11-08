@@ -10,12 +10,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -137,7 +135,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
   @Override
   public void handleFile(File file) {
     try {
-      DigestResult dr = getFileDigest(file);
+      DigestResult dr = makeFileDigest(file);
       
       // duplicates should be rare, so we assume there is none
       List<File> dupFiles = new LinkedList<File>();
@@ -156,8 +154,8 @@ public class DuplicateFileInspector implements FileListenerInterface {
     }
   }
   
-  private DigestResult getFileDigest(File file) throws IOException, 
-                                                       NoSuchAlgorithmException {
+  private DigestResult makeFileDigest(File file) throws IOException, 
+                                                        NoSuchAlgorithmException {
     MessageDigest md = MessageDigest.getInstance(ALGORITHM);
     InputStream in = new FileInputStream(file);
     try {
@@ -236,7 +234,6 @@ public class DuplicateFileInspector implements FileListenerInterface {
     private final boolean isConcurrent;
     private final List<List<File>> threadFiles;
     private final Collection<FolderContainer> completeFolders;
-    private final Map<File, File[]> fileContentsCache;
     
     private DuplicateFolderExaminer(boolean isConcurrent, 
                                     List<List<File>> threadFiles, 
@@ -244,7 +241,6 @@ public class DuplicateFileInspector implements FileListenerInterface {
       this.isConcurrent = isConcurrent;
       this.threadFiles = threadFiles;
       this.completeFolders = completeFolders;
-      fileContentsCache = new HashMap<File, File[]>();
     }
     
     @Override
@@ -252,34 +248,18 @@ public class DuplicateFileInspector implements FileListenerInterface {
       Iterator<List<File>> it = threadFiles.iterator();
       while (it.hasNext()) {
         List<File> files = it.next();
-        try {
-          lookForDuplicatedFolders(isConcurrent, files, 
-                                   completeFolders);
-        } catch (IOException e) {
-          System.err.println("Error examining file list: " + files + 
-                               "...exception: " + e.getMessage());
-        }
+        lookForDuplicatedFolders(isConcurrent, files, 
+                                 completeFolders);
       }
-    }
-    
-    private File[] getFolderContents(File folder) {
-      File[] result = fileContentsCache.get(folder);
-      if (result == null) {
-        result = folder.listFiles();
-        
-        fileContentsCache.put(folder, result);
-      }
-      
-      return result;
     }
     
     private void lookForDuplicatedFolders(boolean threadSafe, List<File> dupFiles, 
-                                          Collection<FolderContainer> completeFolders) throws IOException {
+                                          Collection<FolderContainer> completeFolders) {
       Iterator<File> firstIt = dupFiles.iterator();
       while (firstIt.hasNext()) {
         File firstFile = firstIt.next();
-        File firstParent = firstFile.getParentFile().getCanonicalFile();
-        File[] parentContents = getFolderContents(firstParent);
+        File firstParent = firstFile.getParentFile();
+        File[] parentContents = FileUtils.getFolderContents(firstParent);
         boolean isFilesOnly = true;
         for (File f : parentContents) {
           if (f.isDirectory()) {
@@ -294,7 +274,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
             if (nextDupFile == firstFile) { // skip the same file
               continue;
             }
-            File nextDupParent = nextDupFile.getParentFile().getCanonicalFile();
+            File nextDupParent = nextDupFile.getParentFile();
 
             // skip if the parent folders are the same
             if (firstParent.getAbsolutePath().equals(nextDupParent.getAbsolutePath())) {
@@ -314,7 +294,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
               }
             }
             
-            File[] nextDupParentContents = getFolderContents(nextDupParent);
+            File[] nextDupParentContents = FileUtils.getFolderContents(nextDupParent);
             boolean allHaveMatch = true;
             for (File pf : parentContents) {
               DigestResult dr = fileToDigest.get(pf);

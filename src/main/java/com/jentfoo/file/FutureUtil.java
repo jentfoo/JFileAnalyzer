@@ -15,7 +15,7 @@ public class FutureUtil {
     while (it.hasNext()) {
       try {
         Future<?> f = it.next();
-        if (! f.isDone()) {
+        if (! f.isDone() || ! it.hasNext()) {
           // we take * 10 and / 10 so we can get one additional decimal of accuracy
           int donePercent = (int)Math.round((doneCount / futures.size()) * 100 * 10);
           if (donePercent != lastReportedDonePercent) {
