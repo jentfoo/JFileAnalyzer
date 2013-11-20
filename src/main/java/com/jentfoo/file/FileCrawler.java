@@ -11,15 +11,31 @@ import org.threadly.concurrent.PrioritySchedulerInterface;
 import org.threadly.util.ExceptionUtils;
 
 public class FileCrawler {
-  private static final short MAX_FILES_PER_THREAD = 1000;
-  private static final long MAX_SIZE_PER_THREAD = 1024L * 1024L * 1024L * 10; // 10 GB
+  private static final short MAX_FILES_PER_THREAD_DEFAULT = 1000;
+  private static final long MAX_SIZE_PER_THREAD_DEFAULT = 1024L * 1024L * 1024L * 10; // 10 GB
   
   private final PrioritySchedulerInterface scheduler;
+  private final int maxFilesPerThread;
+  private final long maxSizePerThread;
   private final List<FileListenerInterface> listeners;
   private final List<FileFilterInterface> filters;
   
   public FileCrawler(PrioritySchedulerInterface scheduler) {
+    this(scheduler, MAX_FILES_PER_THREAD_DEFAULT, MAX_SIZE_PER_THREAD_DEFAULT);
+  }
+  
+  /**
+   * Constructs a new FileCrawler which will run in parallel on the provided scheduler.
+   * 
+   * @param scheduler Scheduler to run on.
+   * @param maxFilesPerThread Maximum files to examine per thread (if <= 0 it will be one file per thread)
+   * @param maxSizePerThread Maximum file size accumulated per thread (if <= 0 there will be no limit)
+   */
+  public FileCrawler(PrioritySchedulerInterface scheduler, 
+                     int maxFilesPerThread, long maxSizePerThread) {
     this.scheduler = scheduler;
+    this.maxFilesPerThread = maxFilesPerThread;
+    this.maxSizePerThread = maxSizePerThread;
     this.listeners = new LinkedList<FileListenerInterface>();
     this.filters = new LinkedList<FileFilterInterface>();
   }
@@ -36,6 +52,15 @@ public class FileCrawler {
     }
   }
 
+  /**
+   * Will crawl all the provided directories, and in parallel call the added listeners.
+   * 
+   * This call will block until all directories have been crawled, and all listeners have 
+   * completed.
+   * 
+   * @param examineDirectories List of directories to start crawling from.
+   * @throws IOException
+   */
   public void crawlDirectories(List<File> examineDirectories) throws IOException {
     List<Future<?>> futures = new LinkedList<Future<?>>();
     
@@ -78,10 +103,12 @@ public class FileCrawler {
           toInspectDirectories.add(f);
         } else {
           toInspectFiles.add(f);
-          toInspectSize += f.length();
+          if (maxSizePerThread > 0) {
+            toInspectSize += f.length();
+          }
           
-          if (toInspectSize >= MAX_SIZE_PER_THREAD || 
-              toInspectFiles.size() >= MAX_FILES_PER_THREAD) {
+          if ((maxSizePerThread > 0 && toInspectSize >= maxSizePerThread) || 
+              toInspectFiles.size() >= maxFilesPerThread) {
             futures.add(handleFiles(toInspectFiles));
             
             toInspectFiles = new LinkedList<File>();
