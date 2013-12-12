@@ -9,12 +9,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -67,17 +67,44 @@ public class DuplicateFileInspector implements FileListenerInterface {
       result.append(dupFiles.toString()).append(newLine);
     }
 
-    Collection<FolderContainer> completeFolders = lookForDuplicatedFolders(scheduler, duplicateFiles);
+    Map<FolderContainer, Boolean> completeFolders = lookForDuplicatedFolders(scheduler, duplicateFiles);
     result.append(newLine);
     if (completeFolders.isEmpty()) {
       result.append("No folders are completely duplicated by others");
     } else {
-      Iterator<FolderContainer> it = completeFolders.iterator();
-      while (it.hasNext()) {
-        FolderContainer fc = it.next();
-        result.append("Folder ").append(fc.folder1)
-              .append(" is completely duplicated in folder ").append(fc.folder2)
-              .append(newLine);
+      List<FolderContainer> equalFolders = new LinkedList<FolderContainer>();
+      List<FolderContainer> partiallyDuplicatedFolders = new LinkedList<FolderContainer>();
+      {
+        Iterator<Entry<FolderContainer, Boolean>> it = completeFolders.entrySet().iterator();
+        while (it.hasNext()) {
+          Entry<FolderContainer, Boolean> e = it.next();
+          if (e.getValue()) {
+            equalFolders.add(e.getKey());
+          } else {
+            partiallyDuplicatedFolders.add(e.getKey());
+          }
+        }
+      }
+      if (! equalFolders.isEmpty()) {
+        result.append("Folders which contents are exactly equal:").append(newLine);
+        Iterator<FolderContainer> it = equalFolders.iterator();
+        while (it.hasNext()) {
+            FolderContainer fc = it.next();
+            result.append(fc.folder1).append(" / ").append(fc.folder2)
+                  .append(newLine);
+        }
+        if (! partiallyDuplicatedFolders.isEmpty()) {
+          result.append(newLine);
+        }
+      }
+      if (! partiallyDuplicatedFolders.isEmpty()) {
+        result.append("Folders which are PARTIALLY duplicated (first folder is fully duplicated by second folder):").append(newLine);
+        Iterator<FolderContainer> it = equalFolders.iterator();
+        while (it.hasNext()) {
+            FolderContainer fc = it.next();
+            result.append(fc.folder1).append(" / ").append(fc.folder2)
+                  .append(newLine);
+        }
       }
     }
     result.append(newLine);
@@ -88,9 +115,9 @@ public class DuplicateFileInspector implements FileListenerInterface {
     return result.toString();
   }
   
-  private Collection<FolderContainer> lookForDuplicatedFolders(PrioritySchedulerInterface scheduler, 
-                                                               List<List<File>> duplicateFiles) {
-    final Set<FolderContainer> completeFolders = new HashSet<FolderContainer>();
+  private Map<FolderContainer, Boolean> lookForDuplicatedFolders(PrioritySchedulerInterface scheduler, 
+                                                                 List<List<File>> duplicateFiles) {
+    Map<FolderContainer, Boolean> completeFolders = new HashMap<FolderContainer, Boolean>();
 
     System.out.println("\nDoing folder analysis for duplicate count of: " + duplicateFiles.size());
     if (duplicateFiles.size() < DUPLICATE_FOLDER_THREADING_THRESHOLD) {
@@ -233,11 +260,11 @@ public class DuplicateFileInspector implements FileListenerInterface {
   private class DuplicateFolderExaminer implements Runnable {
     private final boolean isConcurrent;
     private final List<List<File>> threadFiles;
-    private final Collection<FolderContainer> completeFolders;
+    private final Map<FolderContainer, Boolean> completeFolders;
     
     private DuplicateFolderExaminer(boolean isConcurrent, 
                                     List<List<File>> threadFiles, 
-                                    Collection<FolderContainer> completeFolders) {
+                                    Map<FolderContainer, Boolean> completeFolders) {
       this.isConcurrent = isConcurrent;
       this.threadFiles = threadFiles;
       this.completeFolders = completeFolders;
@@ -254,7 +281,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
     }
     
     private void lookForDuplicatedFolders(boolean threadSafe, List<File> dupFiles, 
-                                          Collection<FolderContainer> completeFolders) {
+                                          Map<FolderContainer, Boolean> completeFolders) {
       Iterator<File> firstIt = dupFiles.iterator();
       while (firstIt.hasNext()) {
         File firstFile = firstIt.next();
@@ -284,12 +311,12 @@ public class DuplicateFileInspector implements FileListenerInterface {
             
             if (threadSafe) {
               synchronized (completeFolders) {
-                if (completeFolders.contains(possibleContainer)) {
+                if (completeFolders.containsKey(possibleContainer)) {
                   continue;
                 }
               }
             } else {
-              if (completeFolders.contains(possibleContainer)) {
+              if (completeFolders.containsKey(possibleContainer)) {
                 continue;
               }
             }
@@ -313,14 +340,22 @@ public class DuplicateFileInspector implements FileListenerInterface {
             }
             
             if (allHaveMatch) {
+              FolderContainer reverseContainer = new FolderContainer(possibleContainer.folder2, 
+                                                                     possibleContainer.folder1);
               if (threadSafe) {
                 synchronized (completeFolders) {
-                  if (! completeFolders.contains(possibleContainer)) {
-                    completeFolders.add(possibleContainer);
+                  if (completeFolders.containsKey(reverseContainer)) {
+                    completeFolders.put(reverseContainer, true);
+                  } else if (! completeFolders.containsKey(possibleContainer)) {
+                    completeFolders.put(possibleContainer, false);
                   }
                 }
-              } else {  // no need to check again
-                completeFolders.add(possibleContainer);
+              } else {
+                if (completeFolders.containsKey(reverseContainer)) {
+                    completeFolders.put(reverseContainer, true);
+                } else { // no need to check again
+                  completeFolders.put(possibleContainer, false);
+                }
               }
             }
           }
