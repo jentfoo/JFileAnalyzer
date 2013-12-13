@@ -87,24 +87,15 @@ public class DuplicateFileInspector implements FileListenerInterface {
       }
       if (! equalFolders.isEmpty()) {
         result.append("Folders which contents are exactly equal:").append(newLine);
-        Iterator<FolderContainer> it = equalFolders.iterator();
-        while (it.hasNext()) {
-            FolderContainer fc = it.next();
-            result.append(fc.folder1).append(" / ").append(fc.folder2)
-                  .append(newLine);
-        }
+        outputFolderList(result, equalFolders);
+        
         if (! partiallyDuplicatedFolders.isEmpty()) {
           result.append(newLine);
         }
       }
       if (! partiallyDuplicatedFolders.isEmpty()) {
         result.append("Folders which are PARTIALLY duplicated (first folder is fully duplicated by second folder):").append(newLine);
-        Iterator<FolderContainer> it = equalFolders.iterator();
-        while (it.hasNext()) {
-            FolderContainer fc = it.next();
-            result.append(fc.folder1).append(" / ").append(fc.folder2)
-                  .append(newLine);
-        }
+        outputFolderList(result, partiallyDuplicatedFolders);
       }
     }
     result.append(newLine);
@@ -113,6 +104,15 @@ public class DuplicateFileInspector implements FileListenerInterface {
           .append("ms to process");
     
     return result.toString();
+  }
+  
+  private static void outputFolderList(StringBuilder sb, List<FolderContainer> folders) {
+    Iterator<FolderContainer> it = folders.iterator();
+    while (it.hasNext()) {
+        FolderContainer fc = it.next();
+        sb.append(fc.folder1).append('\t').append(fc.folder2)
+          .append('\n');
+    }
   }
   
   private Map<FolderContainer, Boolean> lookForDuplicatedFolders(PrioritySchedulerInterface scheduler, 
