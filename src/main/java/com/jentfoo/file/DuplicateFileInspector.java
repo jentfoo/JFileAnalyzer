@@ -50,8 +50,8 @@ public class DuplicateFileInspector implements FileListenerInterface {
     return result;
   }
   
-  public String getDuplicateAnalysis(PrioritySchedulerInterface scheduler) {
-    long startTime = Clock.accurateTime();
+  public String getDuplicateAnalysis(PrioritySchedulerInterface scheduler) throws InterruptedException {
+    long startTime = Clock.accurateTimeMillis();
     char newLine = '\n';
     List<List<File>> duplicateFiles = getDuplicateFiles();
     StringBuilder result = new StringBuilder();
@@ -100,7 +100,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
     }
     result.append(newLine);
     result.append("Folder analysis took ")
-          .append(Clock.accurateTime() - startTime)
+          .append(Clock.accurateTimeMillis() - startTime)
           .append("ms to process");
     
     return result.toString();

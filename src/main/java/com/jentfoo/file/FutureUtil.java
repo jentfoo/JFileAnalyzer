@@ -8,6 +8,13 @@ import java.util.concurrent.Future;
 import org.threadly.util.ExceptionUtils;
 
 public class FutureUtil {
+  /* This is different from threadly's FutureUtils because 
+   * we want logging progress as futures complete...Since 
+   * these futures may take a VERY long time to complete.  
+   * The alternative would be to add runnables to these 
+   * so that we log out at 10% intervals, but that would assume 
+   * that the futures complete mostly in order.
+   */
   public static void blockTillAllDone(List<Future<?>> futures) {
     float doneCount = 0;
     int lastReportedDonePercent = 0;
