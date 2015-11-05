@@ -7,20 +7,20 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import org.threadly.concurrent.PrioritySchedulerInterface;
+import org.threadly.concurrent.SubmitterScheduler;
 import org.threadly.util.ExceptionUtils;
 
 public class FileCrawler {
   private static final short MAX_FILES_PER_THREAD_DEFAULT = 1000;
   private static final long MAX_SIZE_PER_THREAD_DEFAULT = 1024L * 1024L * 1024L * 10; // 10 GB
   
-  private final PrioritySchedulerInterface scheduler;
+  private final SubmitterScheduler scheduler;
   private final int maxFilesPerThread;
   private final long maxSizePerThread;
   private final List<FileListenerInterface> listeners;
   private final List<FileFilterInterface> filters;
   
-  public FileCrawler(PrioritySchedulerInterface scheduler) {
+  public FileCrawler(SubmitterScheduler scheduler) {
     this(scheduler, MAX_FILES_PER_THREAD_DEFAULT, MAX_SIZE_PER_THREAD_DEFAULT);
   }
   
@@ -31,7 +31,7 @@ public class FileCrawler {
    * @param maxFilesPerThread Maximum files to examine per thread (if <= 0 it will be one file per thread)
    * @param maxSizePerThread Maximum file size accumulated per thread (if <= 0 there will be no limit)
    */
-  public FileCrawler(PrioritySchedulerInterface scheduler, 
+  public FileCrawler(SubmitterScheduler scheduler, 
                      int maxFilesPerThread, long maxSizePerThread) {
     this.scheduler = scheduler;
     this.maxFilesPerThread = maxFilesPerThread;

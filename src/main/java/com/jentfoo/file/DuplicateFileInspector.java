@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 
-import org.threadly.concurrent.PrioritySchedulerInterface;
+import org.threadly.concurrent.SubmitterScheduler;
 import org.threadly.util.Clock;
 import org.threadly.util.ExceptionUtils;
 
@@ -50,7 +50,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
     return result;
   }
   
-  public String getDuplicateAnalysis(PrioritySchedulerInterface scheduler) throws InterruptedException {
+  public String getDuplicateAnalysis(SubmitterScheduler scheduler) throws InterruptedException {
     long startTime = Clock.accurateTimeMillis();
     char newLine = '\n';
     List<List<File>> duplicateFiles = getDuplicateFiles();
@@ -115,7 +115,7 @@ public class DuplicateFileInspector implements FileListenerInterface {
     }
   }
   
-  private Map<FolderContainer, Boolean> lookForDuplicatedFolders(PrioritySchedulerInterface scheduler, 
+  private Map<FolderContainer, Boolean> lookForDuplicatedFolders(SubmitterScheduler scheduler, 
                                                                  List<List<File>> duplicateFiles) {
     Map<FolderContainer, Boolean> completeFolders = new HashMap<FolderContainer, Boolean>();
 
